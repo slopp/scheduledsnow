@@ -1,0 +1,44 @@
+---
+output: html_document
+---
+
+
+Document run at: `r Sys.time()`.
+
+```{r}
+library(jsonlite)
+library(magrittr)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+source("utils.R")
+areas <- getKnownAreas()
+resorts <- areas$resorts
+area <- lapply(resorts, getAreaData)
+saveRDS(area, file = "/tmp_shared/area.rds")
+```
+
+Preview New Data:
+
+```{r}
+area %>% 
+  lapply(function(.){
+    c(.$resortName, 
+      .$openDownHillTrails, 
+      .$avgBaseDepthMax, 
+      .$snowLast48Hours)}) %>% 
+  do.call(rbind,.) %>% 
+  as.data.frame() %>% 
+  `colnames<-`(c('Resorts','Runs','BaseDepth','NewSnow')) %>% 
+  gather(Metric, Value, -Resorts) %>% 
+  mutate(Value = as.numeric(Value)) %>% 
+  ggplot(aes(Resorts, Value)) +
+    geom_bar(stat = "identity") + 
+    facet_wrap(~Metric) + 
+    coord_flip()
+
+```
+
+This R Markdown document runs on a scheduled basis to update area.rds, which is a file located on shared storage and used by the dashboard.
+
+One benefit of having a scheduled Rmd instead of a scheduled .R file is a self-documenting log of the scheduled job!
